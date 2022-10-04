@@ -51,7 +51,10 @@ def islabel(label):
     return label[-1] == ':' and label[0].isalpha()
 
 
-def interpret(lines):
+def interpret(filename):
+    with open(filename) as file:
+        lines = file.readlines()
+
     def find_labels():
         res = {}
 
@@ -193,10 +196,7 @@ def interpret(lines):
 
 
 if __name__ == '__main__':
-    with open("test.asm") as file:
-        ls = file.readlines()
-
     try:
-        interpret(ls)
+        interpret("factorial.asm")
     except StateException as e:
         pass
