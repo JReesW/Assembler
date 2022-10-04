@@ -1,26 +1,30 @@
 import re
+import os
+os.system("color")
 
-"""
-mov +
-inc +
-dec +
-add +
-sub +
-mul +
-div +
-jmp
-cmp
-je
-jne
-jg
-jge
-jl
-jle
-call
-ret
-msg
-end
-"""
+
+ARITHMETIC_OPERATORS = {
+    "add": lambda a, b: a + b,
+    "sub": lambda a, b: a - b,
+    "mul": lambda a, b: a * b,
+    "div": lambda a, b: a / b,
+}
+
+
+COMPARATIVE_OPERATORS = {
+    "je": lambda a, b: a == b,
+    "jne": lambda a, b: a != b,
+    "jg": lambda a, b: a > b,
+    "jge": lambda a, b: a >= b,
+    "jl": lambda a, b: a < b,
+    "jle": lambda a, b: a <= b
+}
+
+
+UNARY_OPERATORS = {
+    "inc": 1,
+    "dec": -1
+}
 
 
 class StateException(Exception):
@@ -43,6 +47,7 @@ def number(num):
 
 
 def islabel(label):
+    label = label.strip()
     return label[-1] == ':' and label[0].isalpha()
 
 
@@ -51,9 +56,12 @@ def interpret(lines):
         res = {}
 
         for p, ln in enumerate(lines):
+            if ln.strip() == "":
+                continue
+
             match re.split(r" +|, +", ln.strip()):
                 case [lbl] if islabel(lbl):
-                    res[lbl] = p
+                    res[lbl.replace(':', '')] = p
                 case [lbl, *_] if islabel(lbl):
                     error("Syntax", "Invalid label syntax!")
                 case _:
@@ -62,126 +70,131 @@ def interpret(lines):
         return res
 
     def error(kind, message):
-        print(f"{kind} error on line {pointer + 1}:\n >>> {line}\n{message}")
+        print(f"\033[91m{kind} error\033[0m on line {pointer + 1}:\n"
+              f" \033[36m>>>\033[0m {lines[pointer].strip()}\n{message}")
         raise StateException("badabing", registry, kind)
+
+    def get_value(source):
+        if source in registry:
+            return registry[source]
+        error("Registry", f"Variable '\033[92m{source}\033[0m' does not exist in the registry.")
+
+    def get_label(lbl):
+        if lbl in labels:
+            return labels[lbl]
+        error("Label", f"Label '\033[92m{label}\033[0m' is not defined in the program!")
 
     registry = {}
     pointer = 0
-    labels = find_labels(lines)
+    labels = find_labels()
+    comparison = None
+    stack = []
 
     while True:
-        line = lines[pointer]
+        if lines[pointer].strip() == "":
+            pointer += 1
+            continue
+
+        line = lines[pointer].split(';')[0]
 
         match re.split(r" +|, +", line.strip()):
             # mov, move a value of either a constant or a registry to a registry
             case ["mov", dest, const] if isnumber(const):
                 registry[dest] = number(const)
             case ["mov", dest, src]:
-                if src in registry:
-                    registry[dest] = registry[src]
-                else:
-                    error("Registry", f"Variable '{src}' does not exist in the registry.")
-            case ["mov", *_]:
-                error("Syntax", f"Invalid 'mov' syntax!")
+                registry[dest] = get_value(src)
 
-            # inc, increase the value of a registry by 1
-            case ["inc", dest]:
-                if dest in registry:
-                    registry[dest] += 1
-                else:
-                    error("Registry", f"Variable '{dest}' does not exist in the registry.")
-            case ["inc", *_]:
-                error("Syntax", f"Invalid 'inc' syntax!")
+            # inc/dec, increase or decrease the value of a registry by 1
+            case [("inc" | "dec") as op, dest]:
+                get_value(dest)
+                registry[dest] += UNARY_OPERATORS[op]
 
-            # dec, decrease the value of a registry by 1
-            case ["dec", dest]:
-                if dest in registry:
-                    registry[dest] -= 1
+            # The arithmetic operators, first arg must be a register, as the result will be stored there
+            case [("add" | "sub" | "mul" | "div") as op, dest, other]:
+                if isnumber(other):
+                    registry[dest] = ARITHMETIC_OPERATORS[op](get_value(dest), number(other))
                 else:
-                    error("Registry", f"Variable '{dest}' does not exist in the registry.")
-            case ["dec", *_]:
-                error("Syntax", f"Invalid 'dec' syntax!")
-
-            # add, adds either a registry and a number, or two registries, and stores it in the first registry
-            case ["add", dest, const] if isnumber(const):
-                if dest in registry:
-                    registry[dest] += number(const)
-                else:
-                    error("Registry", f"Variable '{dest}' does not exist in the registry.")
-            case ["add", dest, other]:
-                if dest not in registry:
-                    error("Registry", f"Variable '{dest}' does not exist in the registry.")
-                elif other not in registry:
-                    error("Registry", f"Variable '{other}' does not exist in the registry.")
-            case ["add", *_]:
-                error("Syntax", f"Invalid 'add' syntax!")
-
-            # sub, subtracts either a registry and a number, or two registries, and stores it in the first registry
-            case ["sub", dest, const] if isnumber(const):
-                if dest in registry:
-                    registry[dest] -= number(const)
-                else:
-                    error("Registry", f"Variable '{dest}' does not exist in the registry.")
-            case ["sub", dest, other]:
-                if dest not in registry:
-                    error("Registry", f"Variable '{dest}' does not exist in the registry.")
-                elif other not in registry:
-                    error("Registry", f"Variable '{other}' does not exist in the registry.")
-            case ["sub", *_]:
-                error("Syntax", f"Invalid 'sub' syntax!")
-
-            # mul, multiplies either a registry and a number, or two registries, and stores it in the first registry
-            case ["mul", dest, const] if isnumber(const):
-                if dest in registry:
-                    registry[dest] *= number(const)
-                else:
-                    error("Registry", f"Variable '{dest}' does not exist in the registry.")
-            case ["mul", dest, other]:
-                if dest not in registry:
-                    error("Registry", f"Variable '{dest}' does not exist in the registry.")
-                elif other not in registry:
-                    error("Registry", f"Variable '{other}' does not exist in the registry.")
-            case ["mul", *_]:
-                error("Syntax", f"Invalid 'mul' syntax!")
-
-            # div, adds either a registry and a number, or two registries, and stores it in the first registry
-            case ["div", dest, const] if isnumber(const):
-                if dest in registry:
-                    registry[dest] /= number(const)
-                else:
-                    error("Registry", f"Variable '{dest}' does not exist in the registry.")
-            case ["div", dest, other]:
-                if dest not in registry:
-                    error("Registry", f"Variable '{dest}' does not exist in the registry.")
-                elif other not in registry:
-                    error("Registry", f"Variable '{other}' does not exist in the registry.")
-            case ["div", *_]:
-                error("Syntax", f"Invalid 'div' syntax!")
+                    registry[dest] = ARITHMETIC_OPERATORS[op](get_value(dest), get_value(other))
 
             # jmp, jump to a given label
             case ["jmp", label]:
-                if label in labels:
-                    pointer = labels[label]
-                    continue
+                pointer = get_label(label)
+                continue
+
+            # cmp, sets up a comparison, to be used by the comparative jump commands
+            case ["cmp", a, b]:
+                a = number(a) if isnumber(a) else get_value(a)
+                b = number(b) if isnumber(b) else get_value(b)
+                comparison = a, b
+
+            # comparative jump commands
+            case [cond, label] if cond in COMPARATIVE_OPERATORS:
+                if comparison is not None:
+                    if COMPARATIVE_OPERATORS[cond](*comparison):
+                        pointer = get_label(label)
+                        continue
                 else:
-                    error("Label", f"Label '{label}' is not defined in the program!")
-            case ["jmp", *_]:
-                error("Syntax", "Invalid 'jmp' syntax!")
+                    error("Comparison", "No comparison made before trying to jump!")
+
+            # call a function
+            case ["call", label]:
+                stack.append(pointer)
+                pointer = get_label(label)
+                continue
+
+            # return from a function
+            case ["ret"]:
+                if stack:
+                    pointer = stack.pop()
+                else:
+                    error("Stack", "No pointer on the stack to return to!")
+
+            # print a message
+            case ["msg"]:
+                error("Syntax", "Invalid 'msg' syntax!")
+            case ["msg", *_]:
+                args = line.strip().split(' ', 1)[1].strip()
+                parts = []
+
+                cur = ""
+                in_str = False
+
+                for c in args:
+                    if c == ',' and not in_str:
+                        parts.append(cur)
+                        cur = ""
+                        continue
+                    elif c == "'":
+                        in_str = not in_str
+                    cur += c
+                parts.append(cur)
+
+                stripped = [p.strip() for p in parts]
+                print("".join(p[1:-1] if p[0] == "'" else str(get_value(p)) for p in stripped))
 
             # end, ends the program
             case ["end", *_]:
                 break
 
+            case [cmd] if islabel(cmd):
+                pass
+
+            case [cmd, *_]:
+                error("Syntax", f"Invalid '\033[92m{cmd}\033[0m' syntax!")
+
         pointer += 1
+
+        if pointer == len(lines):
+            break
 
     return registry
 
 
 if __name__ == '__main__':
-    with open("test.asm") as file:
+    with open("factorial.asm") as file:
         ls = file.readlines()
 
     try:
         interpret(ls)
-    except Exception:
+    except StateException as e:
         pass
