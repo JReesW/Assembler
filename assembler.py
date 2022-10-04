@@ -70,7 +70,7 @@ def interpret(lines):
         return res
 
     def error(kind, message):
-        print(f"\033[91m{kind} error\033[0m on line {pointer + 1}:\n"
+        print(f"\n\033[91m{kind} error\033[0m on line {pointer + 1}:\n"
               f" \033[36m>>>\033[0m {lines[pointer].strip()}\n{message}")
         raise StateException("badabing", registry, kind)
 
