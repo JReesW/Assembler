@@ -56,13 +56,15 @@ def interpret(lines):
         res = {}
 
         for p, ln in enumerate(lines):
-            if ln.strip() == "":
+            if ln.split(';')[0].strip() == "":
                 continue
 
-            match re.split(r" +|, +", ln.strip()):
+            match re.split(r" +|, +", ln.split(';')[0].strip()):
                 case [lbl] if islabel(lbl):
                     res[lbl.replace(':', '')] = p
                 case [lbl, *_] if islabel(lbl):
+                    nonlocal pointer
+                    pointer = p
                     error("Syntax", "Invalid label syntax!")
                 case _:
                     continue
