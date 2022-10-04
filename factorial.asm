@@ -1,4 +1,4 @@
-mov   a, 5
+mov   a, 7
 mov   b, a
 mov   c, a
 call  proc_fact

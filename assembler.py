@@ -104,10 +104,8 @@ def interpret(filename):
 
         match re.split(r" +|, +", line.strip()):
             # mov, move a value of either a constant or a registry to a registry
-            case ["mov", dest, const] if isnumber(const):
-                registry[dest] = number(const)
-            case ["mov", dest, src]:
-                registry[dest] = get_value(src)
+            case ["mov", dest, other]:
+                registry[dest] = number(other) if isnumber(other) else get_value(other)
 
             # inc/dec, increase or decrease the value of a registry by 1
             case [("inc" | "dec") as op, dest]:
