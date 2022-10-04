@@ -151,7 +151,7 @@ def interpret(lines):
 
             # print a message
             case ["msg"]:
-                error("Syntax", "Invalid 'msg' syntax!")
+                error("Syntax", "Invalid '\033[92mmsg\033[0m' syntax!")
             case ["msg", *_]:
                 args = line.strip().split(' ', 1)[1].strip()
                 parts = []
@@ -191,7 +191,7 @@ def interpret(lines):
 
 
 if __name__ == '__main__':
-    with open("factorial.asm") as file:
+    with open("test.asm") as file:
         ls = file.readlines()
 
     try:

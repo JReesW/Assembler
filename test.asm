@@ -5,4 +5,4 @@ jmp print
 
 print:
 msg   a, '! = ', c ; output text
-jmp idk
+msg
