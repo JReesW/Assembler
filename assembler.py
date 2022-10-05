@@ -7,7 +7,8 @@ ARITHMETIC_OPERATORS = {
     "add": lambda a, b: a + b,
     "sub": lambda a, b: a - b,
     "mul": lambda a, b: a * b,
-    "div": lambda a, b: a / b,
+    "div": lambda a, b: number(a / b),
+    "mod": lambda a, b: a % b
 }
 
 
@@ -40,7 +41,7 @@ def isnumber(num):
 
 
 def number(num):
-    if '.' in num:
+    if float(num) % 1 != 0:
         return float(num)
     else:
         return int(num)
@@ -48,12 +49,18 @@ def number(num):
 
 def islabel(label):
     label = label.strip()
+    if len(label) == 0:
+        return False
     return label[-1] == ':' and label[0].isalpha()
 
 
-def interpret(filename):
-    with open(filename) as file:
-        lines = file.readlines()
+def interpret(lines: [str]) -> {str: (int | float)}:
+    """
+    Interpret given lines of "assembly" code
+
+    :param lines: a list of lines of assembly
+    :return: the registry (for tests / debugging)
+    """
 
     def find_labels():
         res = {}
@@ -96,13 +103,15 @@ def interpret(filename):
     stack = []
 
     while True:
-        if lines[pointer].strip() == "":
+        if pointer == len(lines):
+            break
+
+        line = lines[pointer].split(';')[0].strip()
+        if line == "":
             pointer += 1
             continue
 
-        line = lines[pointer].split(';')[0]
-
-        match re.split(r" +|, +", line.strip()):
+        match re.split(r" +|, +", line):
             # mov, move a value of either a constant or a registry to a registry
             case ["mov", dest, other]:
                 registry[dest] = number(other) if isnumber(other) else get_value(other)
@@ -113,7 +122,7 @@ def interpret(filename):
                 registry[dest] += UNARY_OPERATORS[op]
 
             # The arithmetic operators, first arg must be a register, as the result will be stored there
-            case [("add" | "sub" | "mul" | "div") as op, dest, other]:
+            case [("add" | "sub" | "mul" | "div" | "mod") as op, dest, other]:
                 if isnumber(other):
                     registry[dest] = ARITHMETIC_OPERATORS[op](get_value(dest), number(other))
                 else:
@@ -156,7 +165,7 @@ def interpret(filename):
             case ["msg"]:
                 error("Syntax", "Invalid '\033[92mmsg\033[0m' syntax!")
             case ["msg", *_]:
-                args = line.strip().split(' ', 1)[1].strip()
+                args = line.split(' ', 1)[1].strip()
                 parts = []
 
                 cur = ""
@@ -187,14 +196,24 @@ def interpret(filename):
 
         pointer += 1
 
-        if pointer == len(lines):
-            break
-
     return registry
+
+
+def interpret_file(filename: str) -> {str: (int | float)}:
+    """
+    Interpret an "assembly" file by a given filename
+
+    :param filename: the filename of the assembly file
+    :return: the registry (for tests / debugging)
+    """
+    with open(filename) as file:
+        lines = file.readlines()
+
+    return interpret(lines)
 
 
 if __name__ == '__main__':
     try:
-        interpret("factorial.asm")
+        interpret_file("primefactors.asm")
     except StateException as e:
         pass
