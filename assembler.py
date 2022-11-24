@@ -201,7 +201,7 @@ def interpret(lines: [str]) -> {str: (int | float)}:
 
 def interpret_file(filename: str) -> {str: (int | float)}:
     """
-    Interpret an "assembly" file by a given filename
+    Interpret an "assembly" file from a given filename
 
     :param filename: the filename of the assembly file
     :return: the registry (for tests / debugging)
