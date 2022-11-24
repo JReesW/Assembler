@@ -196,3 +196,25 @@ Remember: this was made purely for fun, so don't expect fast or generally useful
         </td>
     </tr>
 </table>
+
+<hr></hr>
+
+# Example  
+Here's a small example, calculating the factorial of a given number
+<pre><code>mov   a, 7  ; calculate the factorial of 7
+mov   b, a
+mov   c, a
+call  proc_fact
+call  print
+end
+
+proc_fact:
+    dec   b
+    mul   c, b
+    cmp   b, 1
+    jne   proc_fact
+    ret
+
+print:
+    msg   a, '! = ', c ; output text
+    ret</code></pre>
