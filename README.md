@@ -1,7 +1,7 @@
 # Assembler
  Assembly interpreter written in Python.
  
-This interpreter uses a subset of Assembly laid out below.  
+This interpreter uses a custom subset of Assembly laid out below.  
 Remember: this was made purely for fun, so don't expect fast or generally useful code!  
 
 
